@@ -11,9 +11,9 @@ async function bootstrap() {
     }),
   );
   app.enableCors({
-    origin: 'http://localhost:3001', // your frontend URL
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true, // if using cookies / auth headers
+    credentials: true,
   });
   await app.listen(process.env.PORT ?? 3000);
 }

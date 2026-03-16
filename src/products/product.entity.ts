@@ -28,6 +28,9 @@ export class Product {
   @Column({ nullable: true })
   imageType: string; // e.g. 'image/jpeg', 'image/png'
 
+  @Column({ nullable: true })
+  imageUrl: string; // External URL (e.g. Unsplash) when image buffer not used
+
   @Column('decimal')
   price: number;
 

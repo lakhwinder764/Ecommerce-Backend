@@ -38,11 +38,11 @@ export class ProductService {
   }
 
   private toProductResponse(product: Product) {
-    const { image, ...rest } = product;
+    const { image, imageUrl: externalUrl, ...rest } = product;
     return {
       ...rest,
-      hasImage: !!image,
-      imageUrl: image ? `/products/image/${product.id}` : null,
+      hasImage: !!image || !!externalUrl,
+      imageUrl: image ? `/products/image/${product.id}` : externalUrl || null,
     };
   }
 

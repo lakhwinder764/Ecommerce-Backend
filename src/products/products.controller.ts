@@ -38,13 +38,18 @@ export class ProductController {
   @Get('image/:id')
   async getImage(@Param('id') id: number, @Res() res: express.Response) {
     const product = await this.service.findOneWithImage(id);
-    if (!product || !product.image) {
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    if (product.image) {
+      const imageType = product.imageType ?? 'image/jpeg';
+      res.set({ 'Content-Type': imageType, 'Content-Length': product.image.length });
+      res.send(product.image);
+    } else if (product.imageUrl) {
+      res.redirect(302, product.imageUrl);
+    } else {
       throw new NotFoundException('Product image not found');
     }
-    const image = product.image;
-    const imageType = product.imageType ?? 'image/jpeg';
-    res.set({ 'Content-Type': imageType, 'Content-Length': image.length });
-    res.send(image);
   }
 
   @Get(':id')

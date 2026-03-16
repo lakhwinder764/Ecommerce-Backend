@@ -9,24 +9,27 @@ import { User } from './users/users.entity';
 import { ProductModule } from './products/products.module';
 import { Product } from './products/product.entity';
 import { Category } from './categories/category.entity';
+import { PasswordResetToken } from './auth/entities/password-reset-token.entity';
+import { CheckoutModule } from './checkout/checkout.module';
 
 dotenv.config();
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'mysql',
-      host: 'localhost',
-      port: 3306,
-      username: 'root',
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '3306', 10),
+      username: process.env.DB_USERNAME || 'root',
       password: process.env.DB_PASSWORD,
-      database: 'nest_databases',
-      entities: [User, Product, Category],
+      database: process.env.DB_NAME || 'nest_databases',
+      entities: [User, Product, Category, PasswordResetToken],
       synchronize: true, // Set to false in production
       autoLoadEntities: true,
     }),
     AuthModule,
     UsersModule,
     ProductModule,
+    CheckoutModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -21,11 +21,17 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
-  password: string;
+  @Column({ type: 'varchar', nullable: true })
+  password: string | null;
 
   @Column()
   fullName: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  profileImageUrl: string;
+
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  googleId: string;
 
   @Column({
     type: 'enum',
