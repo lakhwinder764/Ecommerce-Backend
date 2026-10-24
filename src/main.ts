@@ -21,7 +21,10 @@ async function bootstrap() {
   if (corsOrigins.length === 0) {
     throw new Error('CORS_ORIGIN must contain at least one allowed origin');
   }
-  corsOrigins.push('https://bucolic-froyo-0ce21b.netlify.app');
+  corsOrigins.push(
+    'https://bucolic-froyo-0ce21b.netlify.app',
+    'https://ecommerce67.netlify.app',
+  );
 
   app.enableCors({
     origin: corsOrigins,
