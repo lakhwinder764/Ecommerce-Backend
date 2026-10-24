@@ -31,6 +31,18 @@
 $ npm install
 ```
 
+## CORS configuration
+
+Set `CORS_ORIGIN` to the exact browser origin(s) allowed to call the API. Use a
+comma-separated list for multiple frontends, without trailing slashes:
+
+```text
+CORS_ORIGIN=https://shop.example.com,https://admin.example.com
+```
+
+When unset, the API allows `http://localhost:3001` for local development.
+Credentials are enabled, so `*` is not a valid origin value.
+
 ## Compile and run the project
 
 ```bash

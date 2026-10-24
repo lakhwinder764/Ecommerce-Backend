@@ -10,8 +10,18 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
+  const corsOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean)
+    : ['http://localhost:3000'];
+
+  if (corsOrigins.length === 0) {
+    throw new Error('CORS_ORIGIN must contain at least one allowed origin');
+  }
+
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3001',
+    origin: corsOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
