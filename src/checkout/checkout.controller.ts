@@ -6,8 +6,7 @@ import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 export class CheckoutController {
   constructor(private readonly checkoutService: CheckoutService) {}
 
-  @Post('create-checkout-session')
-  @Post('api/create-checkout-session')
+  @Post(['create-checkout-session', 'api/create-checkout-session'])
   async createCheckoutSession(
     @Body() dto: CreateCheckoutSessionDto,
     @Req() req: { headers: { origin?: string } },

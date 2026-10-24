@@ -11,6 +11,8 @@ import { Product } from './products/product.entity';
 import { Category } from './categories/category.entity';
 import { PasswordResetToken } from './auth/entities/password-reset-token.entity';
 import { CheckoutModule } from './checkout/checkout.module';
+import { CartModule } from './cart/cart.module';
+import { OrdersModule } from './orders/orders.module';
 
 dotenv.config();
 @Module({
@@ -30,6 +32,8 @@ dotenv.config();
     UsersModule,
     ProductModule,
     CheckoutModule,
+    CartModule,
+    OrdersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

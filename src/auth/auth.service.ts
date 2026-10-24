@@ -9,11 +9,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OAuth2Client } from 'google-auth-library';
 import { UsersService } from '../users/users.service';
+import { User } from '../users/users.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthGoogleDto } from './dto/auth-google.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcrypt';
@@ -23,6 +25,12 @@ import { randomUUID } from 'crypto';
 @Injectable()
 export class AuthService {
   private readonly RESET_TOKEN_EXPIRY_MINUTES = 5;
+  // Refresh tokens use their own secret so they can't pass as access tokens.
+  private readonly refreshSecret =
+    process.env.JWT_REFRESH_SECRET ||
+    `${process.env.JWT_SECRET || 'MY_SECRET_KEY'}:refresh`;
+  private readonly refreshExpiresIn =
+    parseInt(process.env.JWT_REFRESH_EXPIRES_IN || '', 10) || 7 * 86400;
 
   constructor(
     private usersService: UsersService,
@@ -37,13 +45,19 @@ export class AuthService {
     if (existingUser) {
       throw new BadRequestException('Email already registered');
     }
+    if (
+      dto.password_confirm !== undefined &&
+      dto.password_confirm !== dto.password
+    ) {
+      throw new BadRequestException('Passwords do not match');
+    }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     const user = await this.usersService.create({
       email: dto.email,
       password: hashedPassword,
-      fullName: dto.fullName,
+      fullName: dto.fullName ?? dto.first_name,
     });
     return {
       message: 'Registered Successfully!',
@@ -148,25 +162,52 @@ export class AuthService {
   async getProfile(userId: string | number) {
     const user = await this.usersService.findById(userId);
     if (!user) throw new NotFoundException('User not found');
+    return this.toUserResponse(user);
+  }
+
+  async refresh(dto: RefreshTokenDto) {
+    let payload: { sub: string; type?: string };
+    try {
+      payload = await this.jwtService.verifyAsync(dto.refresh, {
+        secret: this.refreshSecret,
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+    const user =
+      payload.type === 'refresh'
+        ? await this.usersService.findById(payload.sub)
+        : null;
+    if (!user) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const { access, refresh } = this.generateToken(user);
+    return { access, refresh };
+  }
+
+  private toUserResponse(user: User) {
     return {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
+      first_name: user.fullName,
       profileImageUrl: user.profileImageUrl ?? null,
     };
   }
 
-  private generateToken(user: any) {
+  private generateToken(user: User) {
     const payload = { sub: user.id, email: user.email };
+    const accessToken = this.jwtService.sign(payload);
 
     return {
-      access_token: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        profileImageUrl: user.profileImageUrl ?? null,
-      },
+      access_token: accessToken,
+      access: accessToken,
+      refresh: this.jwtService.sign(
+        { ...payload, type: 'refresh' },
+        { secret: this.refreshSecret, expiresIn: this.refreshExpiresIn },
+      ),
+      user: this.toUserResponse(user),
       message: 'Logged In Successfully !',
     };
   }

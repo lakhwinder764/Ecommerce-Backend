@@ -40,7 +40,7 @@ comma-separated list for multiple frontends, without trailing slashes:
 CORS_ORIGIN=https://shop.example.com,https://admin.example.com
 ```
 
-When unset, the API allows `http://localhost:3001` for local development.
+When unset, the API allows `http://localhost:3000` for local development.
 Credentials are enabled, so `*` is not a valid origin value.
 
 ## Compile and run the project

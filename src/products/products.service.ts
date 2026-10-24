@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { toStorefrontProduct } from './storefront-product';
 
 @Injectable()
 export class ProductService {
@@ -35,6 +36,24 @@ export class ProductService {
 
   async findOneWithImage(id: number) {
     return this.repo.findOneBy({ id });
+  }
+
+  async findAllForStorefront() {
+    const products = await this.repo.find({
+      where: { isActive: true },
+      relations: { category: true },
+      order: { id: 'ASC' },
+    });
+    return products.map(toStorefrontProduct);
+  }
+
+  async findOneForStorefront(id: number) {
+    const product = await this.repo.findOne({
+      where: { id, isActive: true },
+      relations: { category: true },
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    return toStorefrontProduct(product);
   }
 
   private toProductResponse(product: Product) {

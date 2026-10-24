@@ -1,5 +1,6 @@
 import { User } from 'src/users/users.entity';
 import {
+  CreateDateColumn,
   Entity,
   JoinColumn,
   OneToMany,
@@ -14,10 +15,14 @@ export class Cart {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @OneToOne(() => User)
+  // Null for guest carts, which are identified by their id instead.
+  @OneToOne(() => User, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn()
-  user: User;
+  user: User | null;
 
   @OneToMany(() => CartItem, (item) => item.cart)
   items: CartItem[];
+
+  @CreateDateColumn()
+  createdAt: Date;
 }

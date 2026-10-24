@@ -2,6 +2,23 @@ import { Injectable, Logger } from '@nestjs/common';
 import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import * as nodemailer from 'nodemailer';
+import { Order } from '../orders/order.entity';
+
+const HTML_ESCAPES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+
+const escapeHtml = (value: string) =>
+  value.replace(/[&<>"']/g, (ch) => HTML_ESCAPES[ch]);
+
+const formatPaise = (paise: number) =>
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(
+    paise / 100,
+  );
 
 @Injectable()
 export class MailService {
@@ -49,12 +66,17 @@ export class MailService {
     }
   }
 
-  private saveEmailToFile(html: string, to: string): string {
+  private saveEmailToFile(
+    html: string,
+    to: string,
+    fileName = 'latest-reset.html',
+    title = 'Password Reset',
+  ): string {
     const emailsDir = join(process.cwd(), 'emails');
     if (!existsSync(emailsDir)) mkdirSync(emailsDir, { recursive: true });
 
-    const filePath = join(emailsDir, 'latest-reset.html');
-    const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Password Reset</title></head><body>${html}</body></html>`;
+    const filePath = join(emailsDir, fileName);
+    const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title></head><body>${html}</body></html>`;
     writeFileSync(filePath, fullHtml, 'utf-8');
     return filePath;
   }
@@ -103,5 +125,60 @@ export class MailService {
     this.logger.log(
       `[DEV] Password reset saved. Open this file in your browser: ${filePath}`,
     );
+  }
+
+  // Returns true only if the email actually went out over SMTP.
+  async sendOrderConfirmationEmail(order: Order): Promise<boolean> {
+    const appName = process.env.APP_NAME || 'Ecommerce';
+    const rows = order.items
+      .map(
+        (item) => `
+          <tr>
+            <td>${escapeHtml(item.name)}${item.color ? ` (${escapeHtml(item.color)})` : ''}</td>
+            <td align="center">${item.quantity}</td>
+            <td align="right">${formatPaise(item.price * item.quantity)}</td>
+          </tr>`,
+      )
+      .join('');
+
+    const html = `
+      <p>Hi ${escapeHtml(order.fullName)},</p>
+      <p>Thank you for your order! Your order #${order.id} has been placed.</p>
+      <table cellpadding="6" style="border-collapse:collapse;">
+        <tr><th align="left">Item</th><th>Qty</th><th align="right">Price</th></tr>
+        ${rows}
+      </table>
+      <p>Subtotal: ${formatPaise(order.subtotal)}<br>
+      Shipping: ${formatPaise(order.shippingFee)}<br>
+      <strong>Total: ${formatPaise(order.totalAmount)}</strong></p>
+      <p>Shipping to:<br>${escapeHtml(order.fullName)}<br>
+      ${escapeHtml(order.address)}, ${escapeHtml(order.city)}, ${escapeHtml(order.state)} - ${escapeHtml(order.pincode)}</p>
+      <p>The ${appName} Team</p>
+    `;
+
+    if (this.smtpConfigured && this.transporter) {
+      try {
+        await this.transporter.sendMail({
+          from: `"${appName}" <${this.fromEmail}>`,
+          to: order.email,
+          subject: `Your ${appName} order #${order.id}`,
+          html,
+        });
+        this.logger.log(`Order confirmation email sent to ${order.email}`);
+        return true;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(`SMTP send failed: ${msg}`);
+      }
+    }
+
+    const filePath = this.saveEmailToFile(
+      html,
+      order.email,
+      'latest-order.html',
+      'Order Confirmation',
+    );
+    this.logger.log(`[DEV] Order confirmation saved: ${filePath}`);
+    return false;
   }
 }

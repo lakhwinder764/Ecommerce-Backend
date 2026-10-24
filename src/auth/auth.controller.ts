@@ -14,15 +14,21 @@ import { LoginDto } from './dto/login.dto';
 import { AuthGoogleDto } from './dto/auth-google.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
-@Controller('auth')
+@Controller(['auth', 'api/auth'])
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Get('profile')
+  @Get(['profile', 'me'])
   @UseGuards(AuthGuard('jwt'))
   getProfile(@Request() req: { user: { userId: string } }) {
     return this.authService.getProfile(req.user.userId);
+  }
+
+  @Post('refresh')
+  refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refresh(dto);
   }
 
   @Post('register')
